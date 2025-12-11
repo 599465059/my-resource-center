@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资源管理中心</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入 LeanCloud SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.17.0/dist/av-min.js"></script>
+    <!-- 配置Tailwind自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        accent: '#10b981',
+                        dark: '#1e293b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-hover {
+                @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+            }
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-all;
+            }
+            .btn-secondary {
+                @apply bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition-all;
+            }
+            .input-field {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa fa-folder-open text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-dark">个人资源管理中心</h1>
+            </div>
+            <nav>
+                <ul class="flex gap-6">
+                    <li><a href="#links" class="text-dark hover:text-primary transition-colors">我的链接</a></li>
+                    <li><a href="#documents" class="text-dark hover:text-primary transition-colors">教程文档</a></li>
+                    <li><a href="#settings" class="text-dark hover:text-primary transition-colors">设置</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- 链接管理区域 -->
+        <section id="links" class="mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-dark">我的资料链接</h2>
+                <button id="add-link-btn" class="btn-primary flex items-center gap-2">
+                    <i class="fa fa-plus"></i> 添加链接
+                </button>
+            </div>
+
+            <!-- 链接筛选 -->
+            <div class="mb-6 flex gap-4 flex-wrap">
+                <input type="text" id="link-search" class="input-field max-w-md" placeholder="搜索链接...">
+                <select id="link-category-filter" class="input-field">
+                    <option value="all">所有分类</option>
+                    <option value="personal">个人</option>
+                    <option value="work">工作</option>
+                    <option value="study">学习</option>
+                </select>
+            </div>
+
+            <!-- 链接列表 -->
+            <div id="link-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 链接卡片会通过JS动态生成 -->
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">个人</span>
+                        <button class="text-gray-400 hover:text-red-500"><i class="fa fa-trash"></i></button>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">GitHub 个人主页</h3>
+                    <p class="text-gray-600 mb-4">https://github.com/yourusername</p>
+                    <a href="https://github.com/yourusername" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                        <i class="fa fa-external-link"></i> 访问链接
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 文档管理区域 -->
+        <section id="documents" class="mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-dark">教程文档</h2>
+                <label for="document-upload" class="btn-primary flex items-center gap-2 cursor-pointer">
+                    <i class="fa fa-upload"></i> 上传文档
+                    <input type="file" id="document-upload" class="hidden" accept=".pdf,.doc,.docx,.txt,.md">
+                </label>
+            </div>
+
+            <!-- 文档筛选 -->
+            <div class="mb-6 flex gap-4 flex-wrap">
+                <input type="text" id="document-search" class="input-field max-w-md" placeholder="搜索文档...">
+                <select id="document-type-filter" class="input-field">
+                    <option value="all">所有类型</option>
+                    <option value="pdf">PDF</option>
+                    <option value="doc">Word</option>
+                    <option value="txt">文本</option>
+                    <option value="md">Markdown</option>
+                </select>
+            </div>
+
+            <!-- 文档列表 -->
+            <div id="document-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 文档卡片会通过JS动态生成 -->
+                <div class="bg-white rounded-lg shadow p-6 card-hover">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm">PDF</span>
+                        <div class="flex gap-2">
+                            <button class="text-gray-400 hover:text-blue-500"><i class="fa fa-download"></i></button>
+                            <button class="text-gray-400 hover:text-red-500"><i class="fa fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">前端开发入门教程.pdf</h3>
+                    <p class="text-gray-600 mb-4">大小: 2.4MB | 上传时间: 2025-01-10</p>
+                    <button class="text-primary hover:underline flex items-center gap-1" onclick="previewDocument(this)">
+                        <i class="fa fa-eye"></i> 预览文档
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 设置区域 -->
+        <section id="settings" class="mb-12">
+            <h2 class="text-2xl font-bold text-dark mb-6">设置</h2>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-3">数据管理</h3>
+                    <button id="export-data" class="btn-secondary mr-3">
+                        <i class="fa fa-download"></i> 导出数据
+                    </button>
+                    <button id="import-data" class="btn-primary">
+                        <i class="fa fa-upload"></i> 导入数据
+                    </button>
+                    <input type="file" id="import-file" class="hidden" accept=".json">
+                    <button id="clear-data" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all mt-3">
+                        <i class="fa fa-trash"></i> 清空所有数据
+                    </button>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">个性化设置</h3>
+                    <div class="flex items-center mb-3">
+                        <label class="mr-3">主题模式:</label>
+                        <select id="theme-mode" class="input-field w-auto">
+                            <option value="light">浅色模式</option>
+                            <option value="dark">深色模式</option>
+                            <option value="system">跟随系统</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 链接添加模态框 -->
+    <div id="link-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">添加新链接</h3>
+                <button id="close-link-modal" class="text-gray-400 hover:text-gray-600"><i class="fa fa-times"></i></button>
+            </div>
+            <form id="link-form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">链接名称</label>
+                    <input type="text" id="link-name" class="input-field" required placeholder="例如：GitHub 个人主页">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">链接地址</label>
+                    <input type="url" id="link-url" class="input-field" required placeholder="https://example.com">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">分类</label>
+                    <select id="link-category" class="input-field">
+                        <option value="personal">个人</option>
+                        <option value="work">工作</option>
+                        <option value="study">学习</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">备注 (可选)</label>
+                    <textarea id="link-note" class="input-field" rows="2" placeholder="添加备注信息..."></textarea>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancel-link" class="btn-secondary">取消</button>
+                    <button type="submit" class="btn-primary">保存链接</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 文档预览模态框 -->
+    <div id="document-preview-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-xl font-bold" id="preview-title">文档预览</h3>
+                <button id="close-preview-modal" class="text-gray-400 hover:text-gray-600"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-auto max-h-[calc(80vh-60px)]" id="preview-content">
+                <!-- 预览内容会动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>个人资源管理中心 &copy; 2025</p>
+            <p class="text-gray-400 text-sm mt-2">数据存储在LeanCloud云端，可跨设备访问</p>
+        </div>
+    </footer>
+
+    <script>
+        // ========== LeanCloud 初始化 ==========
+        AV.init({
+            appId: 'BLjNzQCFQ5ieBimjsLERDWUn-gzGzoHsz',
+            appKey: 'juBxxirz47Wpp2URY1oiNfkq',
+            serverURL: 'https://bljnzqcf.lc-cn-n1-shared.com'
+        });
+
+        // 定义数据模型（资源数据）
+        const ResourceData = AV.Object.extend('ResourceData');
+
+        // ========== 数据存储结构 ==========
+        let appData = {
+            links: [],
+            documents: []
+        };
+
+        // 初始化 - 从云端加载数据
+        async function init() {
+            try {
+                // 查询云端是否已有数据（按自定义标识查询）
+                const query = new AV.Query('ResourceData');
+                query.equalTo('owner', 'my_resource_data');
+                const results = await query.find();
+                
+                if (results.length > 0) {
+                    // 加载云端数据
+                    const cloudData = results[0].toJSON();
+                    appData.links = cloudData.links || [];
+                    appData.documents = cloudData.documents || [];
+                } else {
+                    // 无云端数据，初始化空数据并保存到云端
+                    const newData = new ResourceData();
+                    newData.set('owner', 'my_resource_data');
+                    newData.set('links', []);
+                    newData.set('documents', []);
+                    await newData.save();
+                }
+            } catch (error) {
+                console.error('加载云端数据失败：', error);
+                // 失败时降级使用本地存储
+                const savedData = localStorage.getItem('resourceManagerData');
+                if (savedData) {
+                    appData = JSON.parse(savedData);
+                }
+            }
+            
+            renderLinks();
+            renderDocuments();
+            bindEvents();
+        }
+
+        // 绑定所有事件
+        function bindEvents() {
+            // 链接相关事件
+            document.getElementById('add-link-btn').addEventListener('click', openLinkModal);
+            document.getElementById('close-link-modal').addEventListener('click', closeLinkModal);
+            document.getElementById('cancel-link').addEventListener('click', closeLinkModal);
+            document.getElementById('link-form').addEventListener('submit', saveLink);
+            document.getElementById('link-search').addEventListener('input', filterLinks);
+            document.getElementById('link-category-filter').addEventListener('change', filterLinks);
+
+            // 文档相关事件
+            document.getElementById('document-upload').addEventListener('change', uploadDocument);
+            document.getElementById('document-search').addEventListener('input', filterDocuments);
+            document.getElementById('document-type-filter').addEventListener('change', filterDocuments);
+            document.getElementById('close-preview-modal').addEventListener('click', closePreviewModal);
+
+            // 设置相关事件
+            document.getElementById('export-data').addEventListener('click', exportCloudData);
+            document.getElementById('import-data').addEventListener('click', () => {
+                document.getElementById('import-file').click();
+            });
+            document.getElementById('import-file').addEventListener('change', importData);
+            document.getElementById('clear-data').addEventListener('click', clearData);
+            document.getElementById('theme-mode').addEventListener('change', changeTheme);
+        }
+
+        // 链接管理
+        function openLinkModal() {
+            document.getElementById('link-modal').classList.remove('hidden');
+            document.getElementById('link-form').reset();
+        }
+
+        function closeLinkModal() {
+            document.getElementById('link-modal').classList.add('hidden');
+        }
+
+        async function saveLink(e) {
+            e.preventDefault();
+            
+            const newLink = {
+                id: Date.now().toString(),
+                name: document.getElementById('link-name').value,
+                url: document.getElementById('link-url').value,
+                category: document.getElementById('link-category').value,
+                note: document.getElementById('link-note').value,
+                createTime: new Date().toISOString()
+            };
+
+            appData.links.push(newLink);
+            await saveDataToCloud();
+            renderLinks();
+            closeLinkModal();
+            
+            // 显示成功提示
+            showToast('链接添加成功！');
+        }
+
+        function renderLinks(filteredLinks = null) {
+            const linkList = document.getElementById('link-list');
+            const linksToRender = filteredLinks || appData.links;
+            
+            if (linksToRender.length === 0) {
+                linkList.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i class="fa fa-link text-4xl mb-3"></i>
+                        <p>暂无链接数据，点击"添加链接"创建第一个链接</p>
+                    </div>
+                `;
+                return;
+            }
+
+            linkList.innerHTML = '';
+            linksToRender.forEach(link => {
+                const categoryLabels = {
+                    personal: { text: '个人', color: 'primary' },
+                    work: { text: '工作', color: 'secondary' },
+                    study: { text: '学习', color: 'accent' }
+                };
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-6 card-hover';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-${categoryLabels[link.category].color}/10 text-${categoryLabels[link.category].color} px-3 py-1 rounded-full text-sm">
+                            ${categoryLabels[link.category].text}
+                        </span>
+                        <button class="text-gray-400 hover:text-red-500 delete-link" data-id="${link.id}">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">${link.name}</h3>
+                    <p class="text-gray-600 mb-4 break-all">${link.url}</p>
+                    ${link.note ? `<p class="text-gray-500 text-sm mb-4">${link.note}</p>` : ''}
+                    <a href="${link.url}" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                        <i class="fa fa-external-link"></i> 访问链接
+                    </a>
+                `;
+                linkList.appendChild(card);
+            });
+
+            // 绑定删除链接事件
+            document.querySelectorAll('.delete-link').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const linkId = e.currentTarget.dataset.id;
+                    deleteLink(linkId);
+                });
+            });
+        }
+
+        async function deleteLink(linkId) {
+            if (confirm('确定要删除这个链接吗？')) {
+                appData.links = appData.links.filter(link => link.id !== linkId);
+                await saveDataToCloud();
+                renderLinks();
+                showToast('链接已删除');
+            }
+        }
+
+        function filterLinks() {
+            const searchTerm = document.getElementById('link-search').value.toLowerCase();
+            const categoryFilter = document.getElementById('link-category-filter').value;
+            
+            const filtered = appData.links.filter(link => {
+                const matchesSearch = link.name.toLowerCase().includes(searchTerm) || 
+                                      link.url.toLowerCase().includes(searchTerm) ||
+                                      (link.note && link.note.toLowerCase().includes(searchTerm));
+                const matchesCategory = categoryFilter === 'all' || link.category === categoryFilter;
+                
+                return matchesSearch && matchesCategory;
+            });
+            
+            renderLinks(filtered);
+        }
+
+        // 文档管理
+        async function uploadDocument(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 限制文件大小 (10MB)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showToast('文件大小不能超过10MB', 'error');
+                return;
+            }
+
+            // 读取文件并保存
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const docType = getDocType(fileExt);
+                
+                const newDoc = {
+                    id: Date.now().toString(),
+                    name: file.name,
+                    size: formatFileSize(file.size),
+                    type: fileExt,
+                    docType: docType,
+                    content: event.target.result, // Base64 编码
+                    uploadTime: new Date().toISOString()
+                };
+
+                appData.documents.push(newDoc);
+                await saveDataToCloud();
+                renderDocuments();
+                showToast('文档上传成功！');
+                
+                // 清空文件输入
+                document.getElementById('document-upload').value = '';
+            };
+            
+            // 根据文件类型选择读取方式
+            if (['txt', 'md'].includes(fileExt)) {
+                reader.readAsText(file);
+            } else {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function getDocType(ext) {
+            if (ext === 'pdf') return 'pdf';
+            if (['doc', 'docx'].includes(ext)) return 'doc';
+            if (ext === 'txt') return 'txt';
+            if (ext === 'md') return 'md';
+            return 'other';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function renderDocuments(filteredDocs = null) {
+            const docList = document.getElementById('document-list');
+            const docsToRender = filteredDocs || appData.documents;
+            
+            if (docsToRender.length === 0) {
+                docList.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-500">
+                        <i class="fa fa-file-text text-4xl mb-3"></i>
+                        <p>暂无文档数据，点击"上传文档"添加第一个文档</p>
+                    </div>
+                `;
+                return;
+            }
+
+            docList.innerHTML = '';
+            docsToRender.forEach(doc => {
+                const typeColors = {
+                    pdf: 'accent',
+                    doc: 'primary',
+                    txt: 'secondary',
+                    md: 'purple-500',
+                    other: 'gray-500'
+                };
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-6 card-hover';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-${typeColors[doc.docType]}/10 text-${typeColors[doc.docType]} px-3 py-1 rounded-full text-sm">
+                            ${doc.docType.toUpperCase()}
+                        </span>
+                        <div class="flex gap-2">
+                            <button class="text-gray-400 hover:text-blue-500 download-doc" data-id="${doc.id}">
+                                <i class="fa fa-download"></i>
+                            </button>
+                            <button class="text-gray-400 hover:text-red-500 delete-doc" data-id="${doc.id}">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">${doc.name}</h3>
+                    <p class="text-gray-600 mb-4">
+                        大小: ${doc.size} | 上传时间: ${formatDate(doc.uploadTime)}
+                    </p>
+                    <button class="text-primary hover:underline flex items-center gap-1 preview-doc" data-id="${doc.id}">
+                        <i class="fa fa-eye"></i> 预览文档
+                    </button>
+                `;
+                docList.appendChild(card);
+            });
+
+            // 绑定文档操作事件
+            document.querySelectorAll('.download-doc').forEach(btn => {
+                btn.addEventListener('click', (e) => downloadDocument(e.currentTarget.dataset.id));
+            });
+            
+            document.querySelectorAll('.delete-doc').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteDocument(e.currentTarget.dataset.id));
+            });
+            
+            document.querySelectorAll('.preview-doc').forEach(btn => {
+                btn.addEventListener('click', (e) => previewDocument(e.currentTarget.dataset.id));
+            });
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('zh-CN');
+        }
+
+        function downloadDocument(docId) {
+            const doc = appData.documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            // 创建下载链接
+            const link = document.createElement('a');
+            link.href = doc.content;
+            link.download = doc.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('开始下载文档');
+        }
+
+        async function deleteDocument(docId) {
+            if (confirm('确定要删除这个文档吗？')) {
+                appData.documents = appData.documents.filter(doc => doc.id !== docId);
+                await saveDataToCloud();
+                renderDocuments();
+                showToast('文档已删除');
+            }
+        }
+
+        function previewDocument(docId) {
+            const doc = appData.documents.find(d => d.id === docId);
+            if (!doc) return;
+
+            const previewModal = document.getElementById('document-preview-modal');
+            const previewTitle = document.getElementById('preview-title');
+            const previewContent = document.getElementById('preview-content');
+            
+            previewTitle.textContent = `预览: ${doc.name}`;
+            
+            // 根据文档类型显示不同的预览内容
+            if (['txt', 'md'].includes(doc.docType)) {
+                // 文本/Markdown 预览
+                previewContent.innerHTML = `
+                    <pre class="bg-gray-50 p-4 rounded-lg overflow-auto max-h-[60vh]">${doc.content}</pre>
+                `;
+            } else if (doc.docType === 'pdf') {
+                // PDF 预览 (简单展示，实际项目可使用PDF.js)
+                previewContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fa fa-file-pdf-o text-6xl text-red-500 mb-4"></i>
+                        <p class="text-gray-600 mb-4">PDF文档无法直接预览，请下载查看</p>
+                        <button class="btn-primary" onclick="downloadDocument('${doc.id}')">
+                            <i class="fa fa-download"></i> 下载PDF
+                        </button>
+                    </div>
+                `;
+            } else {
+                // 其他类型文档
+                previewContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fa fa-file-o text-6xl text-gray-500 mb-4"></i>
+                        <p class="text-gray-600 mb-4">该类型文档无法预览，请下载查看</p>
+                        <button class="btn-primary" onclick="downloadDocument('${doc.id}')">
+                            <i class="fa fa-download"></i> 下载文档
+                        </button>
+                    </div>
+                `;
+            }
+            
+            previewModal.classList.remove('hidden');
+        }
+
+        function closePreviewModal() {
+            document.getElementById('document-preview-modal').classList.add('hidden');
+        }
+
+        function filterDocuments() {
+            const searchTerm = document.getElementById('document-search').value.toLowerCase();
+            const typeFilter = document.getElementById('document-type-filter').value;
+            
+            const filtered = appData.documents.filter(doc => {
+                const matchesSearch = doc.name.toLowerCase().includes(searchTerm);
+                const matchesType = typeFilter === 'all' || doc.docType === typeFilter;
+                
+                return matchesSearch && matchesType;
+            });
+            
+            renderDocuments(filtered);
+        }
+
+        // 数据管理
+        async function saveDataToCloud() {
+            try {
+                // 查询已有数据
+                const query = new AV.Query('ResourceData');
+                query.equalTo('owner', 'my_resource_data');
+                const results = await query.find();
+                
+                if (results.length > 0) {
+                    // 更新已有数据
+                    const dataObj = results[0];
+                    dataObj.set('links', appData.links);
+                    dataObj.set('documents', appData.documents);
+                    await dataObj.save();
+                } else {
+                    // 新建数据（备用）
+                    const newData = new ResourceData();
+                    newData.set('owner', 'my_resource_data');
+                    newData.set('links', appData.links);
+                    newData.set('documents', appData.documents);
+                    await newData.save();
+                }
+                // 同时备份到本地，防止云端访问失败
+                localStorage.setItem('resourceManagerData', JSON.stringify(appData));
+            } catch (error) {
+                console.error('保存云端数据失败：', error);
+                // 失败时降级保存到本地
+                localStorage.setItem('resourceManagerData', JSON.stringify(appData));
+                showToast('云端保存失败，已保存到本地！', 'error');
+            }
+        }
+
+        // 导出云端数据
+        async function exportCloudData() {
+            try {
+                const query = new AV.Query('ResourceData');
+                query.equalTo('owner', 'my_resource_data');
+                const results = await query.find();
+                if (results.length > 0) {
+                    const cloudData = results[0].toJSON();
+                    const dataStr = JSON.stringify({
+                        links: cloudData.links || [],
+                        documents: cloudData.documents || []
+                    }, null, 2);
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                    const exportFileDefaultName = `cloud-resource-data-${new Date().toISOString().slice(0,10)}.json`;
+                    const linkElement = document.createElement('a');
+                    linkElement.setAttribute('href', dataUri);
+                    linkElement.setAttribute('download', exportFileDefaultName);
+                    linkElement.click();
+                    showToast('云端数据导出成功');
+                }
+            } catch (error) {
+                console.error('导出云端数据失败：', error);
+                showToast('云端导出失败，已导出本地数据！', 'error');
+                // 降级导出本地数据
+                const dataStr = JSON.stringify(appData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = `local-resource-data-${new Date().toISOString().slice(0,10)}.json`;
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    // 验证数据格式
+                    if (importedData.links && importedData.documents) {
+                        appData = importedData;
+                        await saveDataToCloud();
+                        renderLinks();
+                        renderDocuments();
+                        showToast('数据导入成功并同步到云端');
+                    } else {
+                        showToast('导入的数据格式不正确', 'error');
+                    }
+                } catch (error) {
+                    showToast('数据解析失败', 'error');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+            
+            // 清空文件输入
+            document.getElementById('import-file').value = '';
+        }
+
+        async function clearData() {
+            if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                appData = { links: [], documents: [] };
+                await saveDataToCloud();
+                renderLinks();
+                renderDocuments();
+                showToast('所有数据已清空（云端+本地）');
+            }
+        }
+
+        // 主题切换
+        function changeTheme() {
+            const theme = document.getElementById('theme-mode').value;
+            localStorage.setItem('themeMode', theme);
+            
+            // 简化的主题切换
+            if (theme === 'dark') {
+                document.body.classList.add('bg-gray-900', 'text-white');
+                document.body.classList.remove('bg-gray-50');
+            } else {
+                document.body.classList.remove('bg-gray-900', 'text-white');
+                document.body.classList.add('bg-gray-50');
+            }
+            
+            showToast(`已切换为${theme === 'light' ? '浅色' : theme === 'dark' ? '深色' : '系统'}模式`);
+        }
+
+        // 提示消息
+        function showToast(message, type = 'success') {
+            // 创建toast元素
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            toast.textContent = message;
+            
+            // 添加到页面
+            document.body.appendChild(toast);
+            
+            // 3秒后移除
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
